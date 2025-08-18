@@ -5,58 +5,102 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>PCS Checklist</title>
   <meta name="theme-color" content="#2563eb" />
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon.png">
-  <link rel="icon" href="icon.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="app-header">
-    <div class="header-left">
-      <button id="backBtn" class="icon-btn" aria-label="Back" title="Back">
-        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
-          <path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
-    </div>
-    <h1 class="app-title">PCS Checklist</h1>
-    <div class="header-right">
-      <button id="installBtn" class="pill-btn" hidden>Install</button>
+  <header class="app-bar" id="appBar">
+    <button id="backBtn" class="icon-btn" aria-label="Back to phases" title="Back to phases" hidden>
+      <span aria-hidden="true">←</span>
+    </button>
+    <h1 id="appTitle" class="app-title">PCS Checklist</h1>
+    <div class="menu-slot">
+      <button id="phaseMenuBtn" class="icon-btn" aria-label="Phase options" title="Phase options" hidden>⋯</button>
     </div>
   </header>
 
-  <main id="viewRoot" class="app-main"></main>
-
-  <!-- Add Task Modal -->
-  <div id="modalScrim" class="modal-scrim" hidden></div>
-  <div id="addTaskModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="addTaskTitle" hidden>
-    <div class="modal-card">
-      <h2 id="addTaskTitle" class="modal-title">Add Task</h2>
-
-      <label class="input-label" for="taskPhase">Phase (bin)</label>
-      <select id="taskPhase" class="select-input"></select>
-
-      <label class="input-label" for="taskTitle">Title</label>
-      <input id="taskTitle" class="text-input" placeholder="e.g., Schedule household goods pickup" />
-
-      <label class="input-label" for="taskDate">Due date (optional)</label>
-      <input id="taskDate" type="date" class="text-input" />
-
-      <label class="input-label" for="taskDetails">Details (optional)</label>
-      <textarea id="taskDetails" class="text-area" rows="3" placeholder="Add any specifics, links, or notes"></textarea>
-
-      <div class="modal-actions">
-        <button id="cancelAddTask" class="btn secondary">Cancel</button>
-        <button id="saveAddTask" class="btn primary">Save</button>
+  <main id="appRoot" class="app-root">
+    <!-- Phases View -->
+    <section id="phasesView" class="view active" aria-labelledby="phasesHeading">
+      <h2 id="phasesHeading" class="sr-only">Phases</h2>
+      <div id="phasesList" class="phase-list"></div>
+      <div class="empty" id="phasesEmpty" hidden>
+        <p>No phases yet.</p>
+        <button id="addPhaseEmpty" class="btn primary">Add your first phase</button>
       </div>
+    </section>
+
+    <!-- Phase Detail View -->
+    <section id="phaseView" class="view" aria-labelledby="phaseHeading">
+      <div class="phase-header">
+        <input id="phaseTitleInput" class="title-input" aria-label="Edit phase title" />
+        <div class="chips" role="tablist" aria-label="Task filter">
+          <button class="chip" data-filter="all" role="tab" aria-selected="true">All</button>
+          <button class="chip" data-filter="incomplete" role="tab">Incomplete</button>
+          <button class="chip" data-filter="completed" role="tab">Completed</button>
+          <button class="chip" data-filter="overdue" role="tab">Overdue</button>
+        </div>
+      </div>
+
+      <div id="tasksList" class="tasks"></div>
+      <div class="empty" id="tasksEmpty" hidden>No tasks yet. Tap + to add one.</div>
+    </section>
+  </main>
+
+  <!-- Phases Footer -->
+  <div id="phasesFab" class="footer-bar">
+    <button id="addPhaseBtn" class="btn primary wide">+ Add Phase</button>
+  </div>
+
+  <!-- Tasks FAB -->
+  <button id="addTaskFab" class="fab" aria-label="Add Task" title="Add Task" hidden>＋</button>
+
+  <!-- Add/Edit Task Sheet -->
+  <div id="sheetScrim" class="scrim" hidden></div>
+  <div id="taskSheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="taskSheetTitle" hidden>
+    <div class="sheet-header">
+      <h2 id="taskSheetTitle">Add Task</h2>
+      <button id="sheetClose" class="icon-btn" aria-label="Close">✕</button>
+    </div>
+    <div class="sheet-body">
+      <label class="label" for="taskPhaseSelect">Phase</label>
+      <select id="taskPhaseSelect" class="input"></select>
+
+      <label class="label" for="taskTitleInput">Title <span class="req">*</span></label>
+      <input id="taskTitleInput" class="input" placeholder="e.g., Upload docs to VIPER" />
+
+      <label class="label" for="taskDateInput">Due Date</label>
+      <div class="date-row">
+        <input id="taskDateInput" class="input" type="date" />
+        <button id="taskDateClear" class="btn subtle" type="button" aria-label="Clear date">×</button>
+      </div>
+
+      <label class="label" for="taskDescInput">Description</label>
+      <textarea id="taskDescInput" class="input" rows="3" placeholder="Optional notes, links, or details"></textarea>
+    </div>
+    <div class="sheet-footer">
+      <button id="taskCancel" class="btn">Cancel</button>
+      <button id="taskSave" class="btn primary">Save</button>
     </div>
   </div>
 
-  <footer class="app-footer">
-    <div class="footer-note">iPhone-friendly • Local-only storage • PWA-ready</div>
-  </footer>
+  <!-- Overflow menu for phase -->
+  <div id="phaseMenu" class="menu" hidden>
+    <button id="deletePhaseBtn" class="menu-item danger">Delete Phase</button>
+  </div>
+
+  <!-- Toasts -->
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden>
+    <span id="toastMsg"></span>
+    <button id="toastUndo" class="btn link" hidden>Undo</button>
+  </div>
+
+  <!-- Screen reader text -->
+  <span class="sr-only" id="live" aria-live="polite"></span>
 
   <script src="script.js"></script>
 </body>
