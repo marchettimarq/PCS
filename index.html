@@ -1,125 +1,168 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>easyPCS</title>
-  <meta name="theme-color" content="#2563eb">
+  <meta name="theme-color" content="#2F6BFF">
+  <!-- PWA -->
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icon.png">
-  <link rel="apple-touch-icon" href="icon.png">
+  <!-- iOS icons -->
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/icon-64.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Sticky App Bar -->
-  <header id="appBar" class="app-bar" role="banner">
+  <!-- Sticky Top App Bar -->
+  <header id="topBar" class="top-bar" role="banner" aria-label="App bar">
     <div class="bar-left">
-      <button id="backBtn" class="btn-link back" aria-label="Back to Home" title="Back" hidden>← Home</button>
+      <span class="brand">easyPCS</span>
     </div>
-    <h1 id="appTitle" class="app-title" tabindex="-1" aria-live="polite">easyPCS</h1>
+    <div class="bar-center"></div>
     <div class="bar-right">
-      <button id="timelineBtn" class="btn-link" aria-label="Open Master Timeline" title="Master Timeline">Timeline</button>
-      <button id="homeAddPhaseBtn" class="btn primary small" aria-label="Add Phase" title="+ Add Phase">+ Phase</button>
-      <button id="overflowBtn" class="icon-btn" aria-label="More" title="More">⋯</button>
+      <button id="timelineBtn" class="icon-btn" aria-label="Open Master Timeline">📅</button>
+      <button id="kebabBtn" class="icon-btn" aria-label="Open menu">⋯</button>
     </div>
   </header>
 
-  <!-- Overflow Menu (global dev utilities) -->
-  <div id="overflowMenu" class="menu" hidden>
-    <button id="resetDataBtn" class="menu-item danger">Reset Data (seed)</button>
-  </div>
+  <!-- Fixed Bottom Action Bar -->
+  <nav id="bottomBar" class="bottom-bar" role="navigation" aria-label="Primary">
+    <button class="tab-btn" id="homeTab" aria-label="Home">🏠</button>
+    <button class="fab-btn" id="plusBtn" aria-label="Create">＋</button>
+    <button class="tab-btn" id="timelineTab" aria-label="Timeline">📅</button>
+  </nav>
 
-  <main id="appRoot" class="app-root" role="main">
-    <!-- HOME (PHASES) VIEW -->
+  <!-- Main content container. Padding accounts for fixed bars & safe areas -->
+  <main id="app" class="app">
+    <!-- HOME (Carousel) -->
     <section id="homeView" class="view active" aria-labelledby="homeHeading">
       <h2 id="homeHeading" class="sr-only">Phases</h2>
-      <div id="phaseGrid" class="phase-grid"></div>
-      <div id="homeEmpty" class="empty" hidden>
-        <p>No bins yet. Add your first one.</p>
-        <button id="emptyAddPhase" class="btn primary">+ Add Phase</button>
+      <div class="carousel-wrap">
+        <div id="phaseCarousel" class="carousel" aria-label="Phase carousel"></div>
+        <div id="pagerDots" class="dots" role="tablist" aria-label="Phases"></div>
       </div>
     </section>
 
-    <!-- PHASE DETAIL VIEW -->
+    <!-- PHASE DETAIL -->
     <section id="phaseView" class="view" aria-labelledby="phaseHeading">
-      <h2 id="phaseHeading" class="sr-only">Phase Detail</h2>
-
       <div class="phase-header">
-        <input id="phaseTitleInput" class="title-input" aria-label="Edit title" />
-        <div class="phase-actions">
-          <button id="phaseOptionsBtn" class="icon-btn" aria-label="Options" title="Options">⋯</button>
-          <div id="phaseOptionsMenu" class="menu" hidden>
-            <button id="renamePhaseBtn" class="menu-item">Rename</button>
-            <button id="deletePhaseBtn" class="menu-item danger">Delete</button>
-          </div>
-        </div>
+        <button id="backHome" class="back-btn" aria-label="Back to Home">←</button>
+        <input id="phaseTitleInput" class="phase-title-input" aria-label="Edit phase title">
+        <button id="phaseOptionsBtn" class="icon-btn" aria-label="Phase options">⋯</button>
+      </div>
+
+      <div id="phaseFilterRow" class="chips" role="tablist" aria-label="Task filter">
+        <button class="chip" data-filter="all" role="tab" aria-selected="true">All</button>
+        <button class="chip" data-filter="incomplete" role="tab">Incomplete</button>
+        <button class="chip" data-filter="completed" role="tab">Completed</button>
+        <button class="chip" data-filter="overdue" role="tab">Overdue</button>
       </div>
 
       <div id="tasksList" class="tasks"></div>
-      <div id="completedBlock" class="completed-block hidden">
-        <button id="completedToggle" class="btn subtle wide">Completed <span id="completedCount">(0)</span></button>
-        <div id="completedList" class="tasks small-pad"></div>
-      </div>
-
-      <div id="phaseEmpty" class="empty" hidden>No tasks yet. Tap + to add one.</div>
-
-      <!-- Bottom Add Task FAB -->
-      <button id="addTaskFab" class="fab" aria-label="Add Task" title="Add Task">＋</button>
+      <details id="completedBlock" class="completed-block">
+        <summary>Completed (<span id="completedCount">0</span>)</summary>
+        <div id="completedList" class="tasks compact"></div>
+      </details>
     </section>
 
-    <!-- TIMELINE VIEW -->
+    <!-- TIMELINE -->
     <section id="timelineView" class="view" aria-labelledby="timelineHeading">
-      <div class="timeline-header">
-        <h2 id="timelineHeading" class="view-title">Master Timeline</h2>
-        <div class="chip-row" role="tablist" aria-label="Timeline filter">
-          <button class="chip" data-tf="all" role="tab" aria-selected="true">All</button>
-          <button class="chip" data-tf="Pre‑Departure" role="tab">Pre‑Departure</button>
-          <button class="chip" data-tf="Mid Prep" role="tab">Mid Prep</button>
-          <button class="chip" data-tf="Final Out" role="tab">Final Out</button>
-          <button class="chip" data-tf="Arrival (Hill AFB)" role="tab">Arrival</button>
+      <div class="timeline-head">
+        <h2 id="timelineHeading">Master Timeline</h2>
+        <div class="chips">
+          <button class="chip" data-tf="all" aria-selected="true">All</button>
+          <button class="chip" data-tf="Pre‑Departure">Pre‑Departure</button>
+          <button class="chip" data-tf="Mid Prep">Mid Prep</button>
+          <button class="chip" data-tf="Final Out">Final Out</button>
+          <button class="chip" data-tf="Arrival (Hill AFB)">Arrival</button>
         </div>
       </div>
-      <div id="timelineList" class="timeline-list"></div>
-      <div id="timelineEmpty" class="empty" hidden>No dated items yet.</div>
+      <div id="timelineList" class="timeline"></div>
     </section>
   </main>
 
-  <!-- Add/Edit Task Sheet -->
-  <div id="sheetScrim" class="sheet-scrim" hidden></div>
-  <section id="taskSheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>
+  <!-- ***** SHEETS & MENUS ***** -->
+  <!-- Plus Action Sheet -->
+  <div id="actionScrim" class="scrim" hidden></div>
+  <section id="actionSheet" class="sheet" aria-modal="true" role="dialog" aria-labelledby="actionTitle" hidden>
     <div class="sheet-card">
-      <div class="sheet-head">
-        <h3 id="sheetTitle" class="sheet-title">Add Task</h3>
-        <button id="sheetClose" class="icon-btn" aria-label="Close">✕</button>
-      </div>
-      <div class="sheet-body">
-        <label class="label" for="sheetPhase">Bin</label>
-        <select id="sheetPhase" class="input"></select>
+      <h3 id="actionTitle">Create</h3>
+      <button id="actionAddTask" class="sheet-item">Add Task</button>
+      <button id="actionAddPhase" class="sheet-item">Add Phase</button>
+      <button id="actionCancel" class="sheet-item cancel">Cancel</button>
+    </div>
+  </section>
 
-        <label class="label" for="sheetTitleInput">Title <span class="req">*</span></label>
-        <input id="sheetTitleInput" class="input" placeholder="Task title" maxlength="200" />
+  <!-- Add/Edit Task Sheet (only on Phase Detail) -->
+  <div id="taskScrim" class="scrim" hidden></div>
+  <section id="taskSheet" class="sheet" aria-modal="true" role="dialog" aria-labelledby="taskTitle" hidden>
+    <div class="sheet-card">
+      <h3 id="taskTitle">Add Task</h3>
+      <form id="taskForm">
+        <label class="label" for="taskTitleInput">Title <span class="req">*</span></label>
+        <input id="taskTitleInput" class="input" placeholder="e.g., Upload docs to VIPER" required maxlength="200">
 
-        <label class="label" for="sheetDate">Due date</label>
+        <label class="label" for="taskDateInput">Due date</label>
         <div class="date-row">
-          <input id="sheetDate" class="input" type="date" />
-          <button id="sheetDateClear" class="btn subtle" type="button" aria-label="Clear date">×</button>
+          <input id="taskDateInput" class="input" type="date">
+          <button id="taskDateClear" class="btn ghost" type="button" aria-label="Clear date">×</button>
         </div>
 
-        <label class="label" for="sheetDesc">Details</label>
-        <textarea id="sheetDesc" class="input" rows="3" placeholder="Optional notes"></textarea>
-      </div>
-      <div class="sheet-actions">
-        <button id="sheetCancel" class="btn">Cancel</button>
-        <button id="sheetSave" class="btn primary">Save</button>
+        <label class="label" for="taskDescInput">Description</label>
+        <textarea id="taskDescInput" class="input" rows="3" placeholder="Optional notes…"></textarea>
+
+        <div class="sheet-actions">
+          <button type="button" id="taskCancel" class="btn">Cancel</button>
+          <button type="submit" id="taskSave" class="btn primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- Phase Options Menu -->
+  <div id="phaseMenu" class="menu" hidden>
+    <button id="renamePhase" class="menu-item">Rename</button>
+    <button id="deletePhase" class="menu-item danger">Delete Phase</button>
+  </div>
+
+  <!-- Kebab (app) Menu -->
+  <div id="appMenu" class="menu" hidden>
+    <div class="menu-group">
+      <div class="menu-label">Theme</div>
+      <button class="menu-item" data-theme="auto">Auto (Day/Night)</button>
+      <button class="menu-item" data-theme="system">System</button>
+      <button class="menu-item" data-theme="light">Light</button>
+      <button class="menu-item" data-theme="dark">Dark</button>
+    </div>
+    <div class="menu-group">
+      <button id="resetData" class="menu-item danger">Reset Data (seed)</button>
+    </div>
+  </div>
+
+  <!-- Confirm Dialog -->
+  <div id="confirmScrim" class="scrim" hidden></div>
+  <section id="confirmDlg" class="dialog" role="dialog" aria-modal="true" hidden>
+    <div class="dialog-card">
+      <h3 id="confirmTitle">Confirm</h3>
+      <p id="confirmMsg">Are you sure?</p>
+      <div class="dialog-actions">
+        <button id="confirmCancel" class="btn">Cancel</button>
+        <button id="confirmOk" class="btn danger">Delete</button>
       </div>
     </div>
   </section>
 
   <!-- Toast -->
-  <div id="toast" class="toast hidden" role="status" aria-live="polite">
-    <span id="toastMsg"></span>
-    <button id="toastUndo" class="btn link" hidden>Undo</button>
+  <div id="toast" class="toast" aria-live="polite" hidden>
+    <span id="toastMsg"></span><button id="toastUndo" class="btn link" hidden>Undo</button>
   </div>
+
+  <span id="srLive" class="sr-only" aria-live="polite"></span>
 
   <script src="script.js"></script>
 </body>
