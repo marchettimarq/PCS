@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>PCS Checklist</title>
+  <meta name="theme-color" content="#2563eb" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="icon" href="icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-left">
+      <button id="backBtn" class="icon-btn" aria-label="Back" title="Back">
+        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+          <path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+    <h1 class="app-title">PCS Checklist</h1>
+    <div class="header-right">
+      <button id="installBtn" class="pill-btn" hidden>Install</button>
+    </div>
+  </header>
+
+  <main id="viewRoot" class="app-main">
+    <!-- Main view (phase grid) injected by script -->
+  </main>
+
+  <!-- Add Task Modal -->
+  <div id="modalScrim" class="modal-scrim" hidden></div>
+  <div id="addTaskModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="addTaskTitle" hidden>
+    <div class="modal-card">
+      <h2 id="addTaskTitle" class="modal-title">Add Task</h2>
+      <label class="input-label" for="taskTitle">Title</label>
+      <input id="taskTitle" class="text-input" placeholder="e.g., Schedule household goods pickup" />
+
+      <label class="input-label" for="taskDetails">Details (optional)</label>
+      <textarea id="taskDetails" class="text-area" rows="3" placeholder="Add any specifics, links, or notes"></textarea>
+
+      <div class="modal-actions">
+        <button id="cancelAddTask" class="btn secondary">Cancel</button>
+        <button id="saveAddTask" class="btn primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <div class="footer-note">iPhone-friendly • Local-only storage • PWA-ready</div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
