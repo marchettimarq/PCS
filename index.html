@@ -1,106 +1,125 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>PCS Checklist</title>
-  <meta name="theme-color" content="#2563eb" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>easyPCS</title>
+  <meta name="theme-color" content="#2563eb">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.png">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="apple-touch-icon" href="icon.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="app-bar" id="appBar">
-    <button id="backBtn" class="icon-btn" aria-label="Back to phases" title="Back to phases" hidden>
-      <span aria-hidden="true">←</span>
-    </button>
-    <h1 id="appTitle" class="app-title">PCS Checklist</h1>
-    <div class="menu-slot">
-      <button id="phaseMenuBtn" class="icon-btn" aria-label="Phase options" title="Phase options" hidden>⋯</button>
+  <!-- Sticky App Bar -->
+  <header id="appBar" class="app-bar" role="banner">
+    <div class="bar-left">
+      <button id="backBtn" class="btn-link back" aria-label="Back to Home" title="Back" hidden>← Home</button>
+    </div>
+    <h1 id="appTitle" class="app-title" tabindex="-1" aria-live="polite">easyPCS</h1>
+    <div class="bar-right">
+      <button id="timelineBtn" class="btn-link" aria-label="Open Master Timeline" title="Master Timeline">Timeline</button>
+      <button id="homeAddPhaseBtn" class="btn primary small" aria-label="Add Phase" title="+ Add Phase">+ Phase</button>
+      <button id="overflowBtn" class="icon-btn" aria-label="More" title="More">⋯</button>
     </div>
   </header>
 
-  <main id="appRoot" class="app-root">
-    <!-- Phases View -->
-    <section id="phasesView" class="view active" aria-labelledby="phasesHeading">
-      <h2 id="phasesHeading" class="sr-only">Phases</h2>
-      <div id="phasesList" class="phase-list"></div>
-      <div class="empty" id="phasesEmpty" hidden>
-        <p>No phases yet.</p>
-        <button id="addPhaseEmpty" class="btn primary">Add your first phase</button>
+  <!-- Overflow Menu (global dev utilities) -->
+  <div id="overflowMenu" class="menu" hidden>
+    <button id="resetDataBtn" class="menu-item danger">Reset Data (seed)</button>
+  </div>
+
+  <main id="appRoot" class="app-root" role="main">
+    <!-- HOME (PHASES) VIEW -->
+    <section id="homeView" class="view active" aria-labelledby="homeHeading">
+      <h2 id="homeHeading" class="sr-only">Phases</h2>
+      <div id="phaseGrid" class="phase-grid"></div>
+      <div id="homeEmpty" class="empty" hidden>
+        <p>No bins yet. Add your first one.</p>
+        <button id="emptyAddPhase" class="btn primary">+ Add Phase</button>
       </div>
     </section>
 
-    <!-- Phase Detail View -->
+    <!-- PHASE DETAIL VIEW -->
     <section id="phaseView" class="view" aria-labelledby="phaseHeading">
+      <h2 id="phaseHeading" class="sr-only">Phase Detail</h2>
+
       <div class="phase-header">
-        <input id="phaseTitleInput" class="title-input" aria-label="Edit phase title" />
-        <div class="chips" role="tablist" aria-label="Task filter">
-          <button class="chip" data-filter="all" role="tab" aria-selected="true">All</button>
-          <button class="chip" data-filter="incomplete" role="tab">Incomplete</button>
-          <button class="chip" data-filter="completed" role="tab">Completed</button>
-          <button class="chip" data-filter="overdue" role="tab">Overdue</button>
+        <input id="phaseTitleInput" class="title-input" aria-label="Edit title" />
+        <div class="phase-actions">
+          <button id="phaseOptionsBtn" class="icon-btn" aria-label="Options" title="Options">⋯</button>
+          <div id="phaseOptionsMenu" class="menu" hidden>
+            <button id="renamePhaseBtn" class="menu-item">Rename</button>
+            <button id="deletePhaseBtn" class="menu-item danger">Delete</button>
+          </div>
         </div>
       </div>
 
       <div id="tasksList" class="tasks"></div>
-      <div class="empty" id="tasksEmpty" hidden>No tasks yet. Tap + to add one.</div>
+      <div id="completedBlock" class="completed-block hidden">
+        <button id="completedToggle" class="btn subtle wide">Completed <span id="completedCount">(0)</span></button>
+        <div id="completedList" class="tasks small-pad"></div>
+      </div>
+
+      <div id="phaseEmpty" class="empty" hidden>No tasks yet. Tap + to add one.</div>
+
+      <!-- Bottom Add Task FAB -->
+      <button id="addTaskFab" class="fab" aria-label="Add Task" title="Add Task">＋</button>
+    </section>
+
+    <!-- TIMELINE VIEW -->
+    <section id="timelineView" class="view" aria-labelledby="timelineHeading">
+      <div class="timeline-header">
+        <h2 id="timelineHeading" class="view-title">Master Timeline</h2>
+        <div class="chip-row" role="tablist" aria-label="Timeline filter">
+          <button class="chip" data-tf="all" role="tab" aria-selected="true">All</button>
+          <button class="chip" data-tf="Pre‑Departure" role="tab">Pre‑Departure</button>
+          <button class="chip" data-tf="Mid Prep" role="tab">Mid Prep</button>
+          <button class="chip" data-tf="Final Out" role="tab">Final Out</button>
+          <button class="chip" data-tf="Arrival (Hill AFB)" role="tab">Arrival</button>
+        </div>
+      </div>
+      <div id="timelineList" class="timeline-list"></div>
+      <div id="timelineEmpty" class="empty" hidden>No dated items yet.</div>
     </section>
   </main>
 
-  <!-- Phases Footer -->
-  <div id="phasesFab" class="footer-bar">
-    <button id="addPhaseBtn" class="btn primary wide">+ Add Phase</button>
-  </div>
-
-  <!-- Tasks FAB -->
-  <button id="addTaskFab" class="fab" aria-label="Add Task" title="Add Task" hidden>＋</button>
-
   <!-- Add/Edit Task Sheet -->
-  <div id="sheetScrim" class="scrim" hidden></div>
-  <div id="taskSheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="taskSheetTitle" hidden>
-    <div class="sheet-header">
-      <h2 id="taskSheetTitle">Add Task</h2>
-      <button id="sheetClose" class="icon-btn" aria-label="Close">✕</button>
-    </div>
-    <div class="sheet-body">
-      <label class="label" for="taskPhaseSelect">Phase</label>
-      <select id="taskPhaseSelect" class="input"></select>
-
-      <label class="label" for="taskTitleInput">Title <span class="req">*</span></label>
-      <input id="taskTitleInput" class="input" placeholder="e.g., Upload docs to VIPER" />
-
-      <label class="label" for="taskDateInput">Due Date</label>
-      <div class="date-row">
-        <input id="taskDateInput" class="input" type="date" />
-        <button id="taskDateClear" class="btn subtle" type="button" aria-label="Clear date">×</button>
+  <div id="sheetScrim" class="sheet-scrim" hidden></div>
+  <section id="taskSheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>
+    <div class="sheet-card">
+      <div class="sheet-head">
+        <h3 id="sheetTitle" class="sheet-title">Add Task</h3>
+        <button id="sheetClose" class="icon-btn" aria-label="Close">✕</button>
       </div>
+      <div class="sheet-body">
+        <label class="label" for="sheetPhase">Bin</label>
+        <select id="sheetPhase" class="input"></select>
 
-      <label class="label" for="taskDescInput">Description</label>
-      <textarea id="taskDescInput" class="input" rows="3" placeholder="Optional notes, links, or details"></textarea>
+        <label class="label" for="sheetTitleInput">Title <span class="req">*</span></label>
+        <input id="sheetTitleInput" class="input" placeholder="Task title" maxlength="200" />
+
+        <label class="label" for="sheetDate">Due date</label>
+        <div class="date-row">
+          <input id="sheetDate" class="input" type="date" />
+          <button id="sheetDateClear" class="btn subtle" type="button" aria-label="Clear date">×</button>
+        </div>
+
+        <label class="label" for="sheetDesc">Details</label>
+        <textarea id="sheetDesc" class="input" rows="3" placeholder="Optional notes"></textarea>
+      </div>
+      <div class="sheet-actions">
+        <button id="sheetCancel" class="btn">Cancel</button>
+        <button id="sheetSave" class="btn primary">Save</button>
+      </div>
     </div>
-    <div class="sheet-footer">
-      <button id="taskCancel" class="btn">Cancel</button>
-      <button id="taskSave" class="btn primary">Save</button>
-    </div>
-  </div>
+  </section>
 
-  <!-- Overflow menu for phase -->
-  <div id="phaseMenu" class="menu" hidden>
-    <button id="deletePhaseBtn" class="menu-item danger">Delete Phase</button>
-  </div>
-
-  <!-- Toasts -->
-  <div id="toast" class="toast" role="status" aria-live="polite" hidden>
+  <!-- Toast -->
+  <div id="toast" class="toast hidden" role="status" aria-live="polite">
     <span id="toastMsg"></span>
     <button id="toastUndo" class="btn link" hidden>Undo</button>
   </div>
-
-  <!-- Screen reader text -->
-  <span class="sr-only" id="live" aria-live="polite"></span>
 
   <script src="script.js"></script>
 </body>

@@ -1,6 +1,6 @@
 {
-  "name": "PCS Checklist",
-  "short_name": "PCS",
+  "name": "easyPCS",
+  "short_name": "easyPCS",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#ffffff",
