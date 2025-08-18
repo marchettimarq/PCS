@@ -27,17 +27,22 @@
     </div>
   </header>
 
-  <main id="viewRoot" class="app-main">
-    <!-- Main view (phase grid) injected by script -->
-  </main>
+  <main id="viewRoot" class="app-main"></main>
 
   <!-- Add Task Modal -->
   <div id="modalScrim" class="modal-scrim" hidden></div>
   <div id="addTaskModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="addTaskTitle" hidden>
     <div class="modal-card">
       <h2 id="addTaskTitle" class="modal-title">Add Task</h2>
+
+      <label class="input-label" for="taskPhase">Phase (bin)</label>
+      <select id="taskPhase" class="select-input"></select>
+
       <label class="input-label" for="taskTitle">Title</label>
       <input id="taskTitle" class="text-input" placeholder="e.g., Schedule household goods pickup" />
+
+      <label class="input-label" for="taskDate">Due date (optional)</label>
+      <input id="taskDate" type="date" class="text-input" />
 
       <label class="input-label" for="taskDetails">Details (optional)</label>
       <textarea id="taskDetails" class="text-area" rows="3" placeholder="Add any specifics, links, or notes"></textarea>
