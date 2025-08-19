@@ -1,355 +1,374 @@
 
-/* easyPCS - clean build (no neon, fixed 4 phases)
-   - Home: puzzle board of 4 pieces; connects as phases reach 100%
-   - Phase Detail: tasks with circular checkboxes, title (60 cap), date subline, expandable description (180 cap)
-   - Add Task sheet with phase selector; character limits enforced
-   - Timeline basic view
-   - localStorage: pcsChecklist.v1
-*/
+/* easyPCS – fixes & polish
+ * Fix #1: Prevent disappearing tasks by rendering Active + Completed from single source (phase.tasks)
+ * Fix #2: Bottom nav icon sizes/tap targets applied via CSS tokens
+ * Fix #3: Title wraps to 2 lines; description toggle using .expanded (no horizontal scroll)
+ * Option B: Phase carousel with scroll-snap + dots
+ * Housekeeping: pure render functions, event delegation, debounced saves
+ */
 
 const STORAGE_KEY = "pcsChecklist.v1";
-const MAX_TITLE = 60;
-const MAX_DESC = 180;
-const PREVIEW_DESC = 80;
 
-const $ = (sel, root=document)=>root.querySelector(sel);
-const $$ = (sel, root=document)=>Array.from(root.querySelectorAll(sel));
-const nowId = (p)=> `${p}_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
+/* ---------- Utils ---------- */
+const $ = (sel, root=document)=> root.querySelector(sel);
+const $$ = (sel, root=document)=> Array.from(root.querySelectorAll(sel));
+const debounce = (fn, ms=200)=>{ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args),ms);} };
+const byDue = (a,b)=>{ const ad=a.due||"", bd=b.due||""; if(ad&&bd){const c=ad.localeCompare(bd); if(c) return c;} if(ad&&!bd) return -1; if(!ad&&bd) return 1; return (a.title||"").localeCompare(b.title||""); };
+const byCompletedAtDesc = (a,b)=> (b.completedAt||0)-(a.completedAt||0);
+const escapeHTML = (s="")=> s.replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
-/* ---------- Seed Data (fixed 4 phases) ---------- */
+/* ---------- State ---------- */
+let state = loadState() || seedData();
+saveState(); // ensure write once so structure exists
+
+function loadState(){
+  try{ const raw = localStorage.getItem(STORAGE_KEY); return raw? JSON.parse(raw): null; }catch(e){ return null; }
+}
+const saveState = debounce(()=>{
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+}, 200);
+
+/* ---------- Router ---------- */
+let currentPhaseId = null;
+function route(){
+  const h = location.hash || "#/home";
+  if(h.startsWith("#/phase/")){
+    currentPhaseId = decodeURIComponent(h.split("/")[2]);
+    show("viewPhase"); renderPhaseDetail(currentPhaseId);
+  }else if(h.startsWith("#/timeline")){
+    show("viewTimeline"); renderTimeline();
+  }else{
+    show("viewHome"); renderHome();
+  }
+}
+window.addEventListener("hashchange", route);
+function show(id){ $$(".view").forEach(v=>v.classList.remove("active")); $("#"+id).classList.add("active"); }
+
+/* ---------- Seed Data (4 fixed phases) ---------- */
 function seedData(){
+  const now = Date.now();
   return {
-    version:1,
     phases:[
-      { id:"p1", title:"Pre‑Departure", suspense:"2025-09-23", tasks:[
-        {id:nowId("t"), title:"Complete Initial Assignment Briefing in vMPF (within 7 days of RIP)", due:"2025-08-15", desc:"", done:false},
-        {id:nowId("t"), title:"Fill out and upload Assignment Information Worksheet", due:"2025-09-23", desc:"", done:false},
-        {id:nowId("t"), title:"Verify dependents in DEERS / print DD 1172-2", due:"2025-09-23", desc:"", done:false},
-        {id:nowId("t"), title:"Complete SOES/SGLI update in milConnect; print certified copy", due:"2025-09-23", desc:"", done:false},
-        {id:nowId("t"), title:"Start FMTS and Initial Travel Screening Questionnaire (ITSQ)", due:"2025-09-23", desc:"", done:false},
-        {id:nowId("t"), title:"Schedule/complete Immunizations Memo (86 MDG Immunizations)", due:"2025-09-23", desc:"", done:false},
-        {id:nowId("t"), title:"Obtain Security Clearance Memorandum from unit Security Manager (SECRET; validate in DISS)", due:"2025-09-23", desc:"", done:false},
-        {id:nowId("t"), title:"Check retainability requirement; start with CSS; obtain signed Retention memo", due:"2025-09-23", desc:"", done:false},
-        {id:nowId("t"), title:"If dependents, complete DAF 965 Overseas Tour Election (only if required)", due:"2025-09-23", desc:"", done:false},
-        {id:nowId("t"), title:"If TDY enroute, attach RIP + funding info", due:"2025-09-23", desc:"", done:false},
-        {id:nowId("t"), title:"If carrying firearms, record POF details (Make/Model/Serial)", due:"2025-09-23", desc:"", done:false},
-        {id:nowId("t"), title:"(Optional) Sign AOI Acknowledgement Memo", due:"2025-09-01", desc:"", done:false},
-        {id:nowId("t"), title:"(Optional) Upload Assignment Worksheet, medical clearance initiation screenshot, DD1172-2", due:"2025-09-01", desc:"", done:false},
-        {id:nowId("t"), title:"(Optional) Use AOI orders for HHG/Passenger Travel scheduling — cannot depart without amendment validating FMTS/security clearance", due:"2025-09-10", desc:"", done:false},
-        // extras
-        {id:nowId("t"), title:"Decide car plan: ship, sell, or drive (paperwork path)", due:"2025-08-25", desc:"Get quotes and DMV/shipper requirements.", done:false},
-        {id:nowId("t"), title:"Cats: schedule vet checkups & travel health certificates for 3 cats", due:"2025-08-20", desc:"Ask clinic for airline/base requirements.", done:false},
+      { id:"p1", title:"Pre‑Departure", tasks:[
+        { id:"t1", title:"Complete Initial Assignment Briefing in vMPF (within 7 days of RIP)", due:"2025-08-15", desc:"", done:false, createdAt:now },
+        { id:"t2", title:"Fill out and upload Assignment Information Worksheet", due:"2025-09-23", desc:"", done:false, createdAt:now },
+        { id:"tCars", title:"Decide car plan: ship, sell, or drive (paperwork)", due:"2025-09-01", desc:"", done:false, createdAt:now },
+        { id:"tCats", title:"Cats (3): vet checkups + travel health certificates", due:"2025-08-30", desc:"", done:false, createdAt:now }
       ]},
-      { id:"p2", title:"Mid Prep", suspense:"2025-11-30", tasks:[
-        {id:nowId("t"), title:"VIPER Folder – upload all required docs; CSS marks 'In Person Final Out Ready – Submitted to MPF.'", due:"2025-11-15", desc:"", done:false},
-        {id:nowId("t"), title:"Relocation Processing Memorandum", due:"2025-11-10", desc:"", done:false},
-        {id:nowId("t"), title:"Weapons training current (AF 522 if required)", due:"2025-10-31", desc:"", done:false},
-        {id:nowId("t"), title:"Security debrief / badge turn‑in", due:"2025-11-30", desc:"", done:false},
-        {id:nowId("t"), title:"Family Care Plan (AF 357) if single parent/mil‑to‑mil", due:"2025-10-15", desc:"", done:false},
-        {id:nowId("t"), title:"GTC active / mission‑critical", due:"2025-10-01", desc:"", done:false},
-        {id:nowId("t"), title:"AT/FP Brief (not required CONUS)", due:"2025-11-10", desc:"", done:false},
-        {id:nowId("t"), title:"Fitness file closed/hand‑carried if applicable", due:"2025-11-20", desc:"", done:false},
-        {id:nowId("t"), title:"Route for CC/DO/CCF/First Sgt signature", due:"2025-11-25", desc:"", done:false},
-        {id:nowId("t"), title:"Virtual Outprocessing (vMPF) – complete all items except Outbound Assignments", due:"2025-11-20", desc:"", done:false},
-        {id:nowId("t"), title:"Physical Fitness valid through 2026‑01‑31 (retest if due)", due:"2025-11-15", desc:"", done:false},
-        {id:nowId("t"), title:"Orders Review – dependents, RNLTD, remarks", due:"2025-11-10", desc:"", done:false},
-        {id:nowId("t"), title:"Household Goods (TMO) – after orders/AOI, schedule pack‑out", due:"2025-11-05", desc:"", done:false},
-        {id:nowId("t"), title:"If traveling different routing: submit Circuitous Travel Memo", due:"2025-11-12", desc:"", done:false},
-        // extra
-        {id:nowId("t"), title:"Reserve lodging at Hill AFB before rental search (pet‑friendly)", due:"2025-11-01", desc:"", done:false},
+      { id:"p2", title:"Mid Prep", tasks:[
+        { id:"tVip", title:"VIPER Folder — upload required docs", due:"2025-11-15", desc:"", done:false, createdAt:now },
+        { id:"tLodging", title:"Reserve lodging at Hill AFB (pet‑friendly)", due:"2025-10-20", desc:"", done:false, createdAt:now }
       ]},
-      { id:"p3", title:"Final Out", suspense:"2025-12-19", tasks:[
-        {id:nowId("t"), title:"CSS Outprocessing – 1 duty day before MPF", due:"2025-12-18", desc:"", done:false},
-        {id:nowId("t"), title:"Final Out Appointment (MPF) – WaitWhile; bring all docs", due:"2025-12-19", desc:"Checklist: Orders, SOES/SGLI, Relocation Memos, vOP, Immunizations, Security Memo", done:false},
-        {id:nowId("t"), title:"Port Call – upload orders to PTA, confirm flight", due:"2025-12-10", desc:"", done:false},
-        {id:nowId("t"), title:"Finance Outprocessing – DLA, travel voucher, GTC usage", due:"2025-12-19", desc:"", done:false}
+      { id:"p3", title:"Final Out", tasks:[
+        { id:"tCss", title:"CSS Outprocessing — 1 duty day before MPF", due:"2025-12-18", desc:"", done:false, createdAt:now },
+        { id:"tFin", title:"Finance Outprocessing (CPTS) — DLA, voucher, GTC", due:"2025-12-19", desc:"", done:false, createdAt:now }
       ]},
-      { id:"p4", title:"Arrival (Hill AFB)", suspense:"2026-01-31", tasks:[
-        {id:nowId("t"), title:"Report to unit CSS within 24 hrs", due:"2026-01-02", desc:"", done:false},
-        {id:nowId("t"), title:"In‑process Finance (update BAH, COLA, etc.)", due:"2026-01-05", desc:"", done:false},
-        {id:nowId("t"), title:"In‑process Medical at Hill AFB Clinic", due:"2026-01-05", desc:"", done:false},
-        {id:nowId("t"), title:"Update DEERS/Tricare with new address", due:"2026-01-06", desc:"", done:false},
-        {id:nowId("t"), title:"Secure housing (on/off base)", due:"2026-01-15", desc:"", done:false},
-        {id:nowId("t"), title:"School/childcare enrollment for dependents", due:"2026-01-10", desc:"", done:false},
-        {id:nowId("t"), title:"Register vehicle(s) / base access decals as applicable", due:"2026-01-07", desc:"", done:false},
-      ]},
+      { id:"p4", title:"Arrival", tasks:[
+        { id:"tRpt", title:"Report to unit CSS within 24 hrs", due:"2026-01-02", desc:"", done:false, createdAt:now },
+        { id:"tVeh", title:"Register vehicles / base access decals", due:"2026-01-06", desc:"", done:false, createdAt:now }
+      ]}
     ],
     timeline:[
-      {date:"2025-07-15", title:"Assignment notification RIP issued", phase:null, done:true},
-      {date:"2025-08-15", title:"Initial Assignment Briefing complete; begin medical/security/immunizations", phase:"Pre‑Departure", done:true},
-      {date:"2025-09-23", title:"Document suspense — AW, DD1172‑2, FMTS/ITSQ, Immunizations, Security Memo, Retainability memo uploaded", phase:"Pre‑Departure", done:false},
-      {date:"2025-10-15", title:"Follow up FMTS clearance; VIPER folder check", phase:"Mid Prep", done:false},
-      {date:"2025-11-15", title:"Relocation Memo routing, vOP, fitness if due. Schedule HHG. Circuitous Travel if needed.", phase:"Mid Prep", done:false},
-      {date:"2025-12-05", title:"Confirm orders and port call", phase:"Final Out", done:false},
-      {date:"2025-12-18", title:"CSS Outprocessing", phase:"Final Out", done:false},
-      {date:"2025-12-19", title:"MPF Final Out appointment", phase:"Final Out", done:false},
-      {date:"2025-12-22", title:"Projected Departure", phase:"Final Out", done:false},
-      {date:"2026-01-31", title:"Report to Hill AFB by RNLTD 31 Jan; in‑process unit, finance, housing, medical", phase:"Arrival (Hill AFB)", done:false}
+      { date:"2025-07-15", title:"Assignment notification RIP issued", phase:null, done:true },
+      { date:"2025-09-23", title:"Document suspense (AW, DD1172‑2, FMTS/ITSQ...)", phase:"Pre‑Departure", done:false },
+      { date:"2025-12-19", title:"MPF Final Out appointment", phase:"Final Out", done:false },
+      { date:"2026-01-31", title:"Report to Hill AFB by RNLTD", phase:"Arrival", done:false }
     ]
   };
 }
 
-/* ---------- Persistence ---------- */
-function loadState(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(!raw) return null;
-    const data = JSON.parse(raw);
-    return data && data.version===1 ? data : null;
-  }catch(e){ return null; }
+/* ---------- Home: Phase Carousel (Option B) ---------- */
+function renderHome(){
+  const scroller = $("#phaseCarousel"); scroller.innerHTML = "";
+  const dots = $("#carouselDots"); dots.innerHTML = "";
+  state.phases.forEach((p, i)=>{
+    scroller.appendChild(renderPhaseCard(p));
+    const d = document.createElement("div"); d.className = "dot" + (i===0?" active":""); d.dataset.index = i; dots.appendChild(d);
+  });
+  scroller.onclick = (e)=>{
+    const card = e.target.closest(".phase-card"); if(!card) return;
+    location.hash = `#/phase/${encodeURIComponent(card.dataset.phaseId)}`;
+  };
+  scroller.addEventListener("scroll", onCarouselScroll, { passive:true });
+  requestAnimationFrame(onCarouselScroll);
 }
-let STATE = loadState() || seedData();
-save();
-function save(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE)); }catch(e){} }
-
-/* ---------- Router (#/home, #/phase/:id, #/timeline) ---------- */
-window.addEventListener("hashchange", route);
-function route(){
-  const h = location.hash || "#/home";
-  if(h.startsWith("#/phase/")) renderPhase(h.split("/")[2]);
-  else if(h.startsWith("#/timeline")) renderTimeline();
-  else renderHome();
+function renderPhaseCard(phase){
+  const wrap = document.createElement("button");
+  wrap.className = "phase-card"; wrap.dataset.phaseId = phase.id;
+  const stats = phaseStats(phase);
+  wrap.innerHTML = `
+    <div class="phase-header-row">
+      <div class="phase-title">${escapeHTML(phase.title)}</div>
+      <div class="phase-metrics">${stats.done}/${stats.total} complete</div>
+    </div>
+    <div class="progress"><div class="progress-fill" style="width:${stats.total? Math.round(stats.done/stats.total*100):0}%"></div></div>
+    <div class="next-date">Next: ${stats.next || "—"}</div>
+  `;
+  return wrap;
 }
-/* Nav buttons */
-$("#homeNav").onclick = ()=> location.hash="#/home";
-$("#timelineNav").onclick = $("#timelineBtnTop").onclick = ()=> location.hash="#/timeline";
-$("#menuBtn").onclick = ()=> openActionSheet();
-$("#addNav").onclick = ()=> openActionSheet();
-
-/* ---------- Helpers ---------- */
-function progress(phase){
+function onCarouselScroll(){
+  const scroller = $("#phaseCarousel");
+  const center = scroller.getBoundingClientRect().left + scroller.clientWidth/2;
+  const cards = $$(".phase-card", scroller);
+  let best=0, dist=Infinity;
+  cards.forEach((c,i)=>{
+    const r = c.getBoundingClientRect(); const d = Math.abs((r.left+r.width/2) - center);
+    if(d<dist){ dist=d; best=i; }
+  });
+  const dots = $$(".dot"); dots.forEach((d,i)=> d.classList.toggle("active", i===best));
+}
+function phaseStats(phase){
   const total = phase.tasks.length;
   const done = phase.tasks.filter(t=>t.done).length;
-  const pct = total? Math.round(done/total*100): 0;
-  const next = nextDue(phase);
-  return {total, done, pct, next};
-}
-function nextDue(phase){
-  const today="0000-00-00";
-  const dates = phase.tasks.filter(t=>!t.done && t.due).map(t=>t.due).sort();
-  return dates[0] || "";
-}
-function textClamp(str, max){ if(!str) return ""; if(str.length<=max) return str; return str.slice(0,max-1)+"…"; }
-
-/* ---------- Home (Puzzle Board) ---------- */
-function renderHome(){
-  const root = $("#viewRoot");
-  root.innerHTML = "";
-  const board = document.createElement("section");
-  board.className = "board";
-  // compute number of fully completed phases
-  let completedPhases = 0;
-  STATE.phases.forEach((p,i)=>{
-    const {total, done, pct, next} = progress(p);
-    if(total>0 && done===total) completedPhases++;
-    const piece = document.createElement("article");
-    piece.className = `piece p${i+1}`;
-    piece.innerHTML = `
-      <div>
-        <h3>${p.title}</h3>
-        <div class="sub">${done}/${total} complete</div>
-        <div class="progress" aria-label="progress"><span style="width:${pct}%"></span></div>
-        <div class="sub">${next?`Next: ${next}`:`No pending dates`}</div>
-      </div>
-    `;
-    piece.addEventListener("click", ()=> location.hash = `#/phase/${p.id}`);
-    board.appendChild(piece);
-  });
-  if(completedPhases>0) board.classList.add(`connect-${Math.min(4,completedPhases)}`);
-  root.appendChild(board);
+  const incomplete = phase.tasks.filter(t=>!t.done && t.due);
+  const next = incomplete.length? incomplete.map(t=>t.due).sort()[0] : null;
+  return { total, done, next };
 }
 
 /* ---------- Phase Detail ---------- */
-function renderPhase(phaseId){
-  const phase = STATE.phases.find(p=>p.id===phaseId);
+function renderPhaseDetail(phaseId){
+  const phase = state.phases.find(p=>p.id===phaseId);
   if(!phase){ location.hash="#/home"; return; }
-  const root = $("#viewRoot"); root.innerHTML = "";
-  const header = document.createElement("div");
-  header.className="header-row";
-  const title = document.createElement("div"); title.className="phase-title"; title.textContent = phase.title;
-  const back = document.createElement("button"); back.className="btn"; back.textContent="← Home"; back.onclick=()=>location.hash="#/home";
-  header.appendChild(back); header.appendChild(title);
-  root.appendChild(header);
+  $("#phaseTitleInput").value = phase.title;
+  renderTaskLists(phaseId);
+}
 
-  const list = document.createElement("div"); list.className="tasks";
+/* FIX #1: render active+completed from the single source array; no disappearing */
+function renderTaskLists(phaseId){
+  const phase = state.phases.find(p=>p.id===phaseId);
+  const active = phase.tasks.filter(t=>!t.done).sort(byDue);
+  const completed = phase.tasks.filter(t=>t.done).sort(byCompletedAtDesc);
 
-  const tasksSorted = phase.tasks.slice().sort((a,b)=>{
-    if(a.done!==b.done) return a.done?1:-1;
-    const ad=a.due||"", bd=b.due||""; if(ad&&bd){ const c=ad.localeCompare(bd); if(c) return c; }
-    if(ad&&!bd) return -1; if(!ad&&bd) return 1;
-    return a.title.localeCompare(b.title);
-  });
+  const activeList = $("#activeList"); const completedList = $("#completedList");
+  activeList.innerHTML = ""; completedList.innerHTML = "";
 
-  let completed = [];
+  if(active.length===0 && completed.length===0){ $("#emptyPhase").hidden = False; }
+  else { $("#emptyPhase").hidden = true; }
 
-  tasksSorted.forEach(t=>{
-    const item = document.createElement("div"); item.className="task";
-    const row = document.createElement("div"); row.className="row";
+  active.forEach(t=> activeList.appendChild(renderTaskRow(phaseId, t)));
+  $("#completedLabel").textContent = `Completed (${completed.length})`;
+  completed.forEach(t=> completedList.appendChild(renderTaskRow(phaseId, t, true)));
 
-    const box = document.createElement("button"); box.className="check"+(t.done?" done":""); box.setAttribute("aria-label","Toggle complete");
-    box.textContent = t.done?"✓":"";
-    box.onclick = ()=>{ t.done = !t.done; save(); renderPhase(phaseId); };
+  // Default collapse if >5 completed and user hasn't toggled
+  const block = $("#completedBlock");
+  if(completed.length>5 && !block.hasAttribute("data-user")) block.open = False;
+}
 
-    const mid = document.createElement("div");
-    const ttl = document.createElement("div"); ttl.className="title"; ttl.textContent = textClamp(t.title, MAX_TITLE);
-    // inline edit via prompt on click
-    ttl.title = t.title;
-    ttl.onclick = ()=>{
-      const v = prompt("Edit title (max "+MAX_TITLE+")", t.title)||t.title;
-      t.title = v.slice(0,MAX_TITLE); save(); renderPhase(phaseId);
-    };
-    const date = document.createElement("div"); date.className="date"; date.textContent = t.due? t.due : "No date";
-    mid.appendChild(ttl); mid.appendChild(date);
+/* Build one task row + its hidden description block (Fix #3 wraps) */
+function renderTaskRow(phaseId, task, isCompleted=false){
+  const row = document.createElement("div");
+  row.className = "task-row";
+  row.dataset.phaseId = phaseId;
+  row.dataset.taskId = task.id;
+  row.innerHTML = `
+    <button class="check${task.done? " done": ""}" aria-label="Toggle complete">
+      ${task.done? '<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>': ""}
+    </button>
+    <div class="task-main">
+      <div class="task-title">${escapeHTML(task.title)}</div>
+      <div class="task-date">${task.due || "No date"}</div>
+    </div>
+    <button class="expand-btn" aria-label="Expand details"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="currentColor"/></svg></button>
+  `;
+  const desc = document.createElement("div");
+  desc.className = "task-desc";
+  desc.innerHTML = `
+    <div class="desc-text">${escapeHTML(task.desc||"")}</div>
+    <div class="desc-actions">
+      <label class="label" for="date-${task.id}">Due Date</label>
+      <input id="date-${task.id}" class="input" type="date" value="${task.due||""}">
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button class="btn small" data-action="edit-desc">Edit description</button>
+        <button class="btn danger small" data-action="delete-task">Delete</button>
+      </div>
+    </div>
+  `;
+  const frag = document.createDocumentFragment();
+  frag.appendChild(row); frag.appendChild(desc);
+  return frag;
+}
 
-    const che = document.createElement("button"); che.className="chev"; che.textContent="▾";
-    che.onclick = ()=>{
-      const m = item.querySelector(".meta");
-      m.classList.toggle("open");
-      che.textContent = m.classList.contains("open")?"▴":"▾";
-    };
+/* ---------- Event Delegation ---------- */
+// Back to Home
+$("#btnBack").addEventListener("click", ()=> location.hash = "#/home");
+// Phase title inline save
+let prevTitle = "";
+$("#phaseTitleInput").addEventListener("focus", e=> prevTitle = e.target.value);
+$("#phaseTitleInput").addEventListener("keydown", e=>{
+  if(e.key==="Escape"){ e.target.value = prevTitle; e.target.blur(); }
+  if(e.key==="Enter"){ e.preventDefault(); e.target.blur(); }
+});
+$("#phaseTitleInput").addEventListener("blur", e=>{
+  const v = e.target.value.trim() || "Untitled";
+  const p = state.phases.find(x=>x.id===currentPhaseId); if(!p) return;
+  if(p.title !== v){ p.title = v; saveState(); renderHome(); }
+});
 
-    row.appendChild(box); row.appendChild(mid); row.appendChild(che);
-    item.appendChild(row);
+// Task list click handlers (toggle, expand, delete, edit, date change)
+$("#taskLists").addEventListener("click", (e)=>{
+  const row = e.target.closest(".task-row");
+  const button = e.target.closest("button");
+  if(!row || !button) return;
 
-    const meta = document.createElement("div"); meta.className="meta";
-    const dlabel = document.createElement("label"); dlabel.className="label"; dlabel.textContent="Description";
-    const p = document.createElement("p"); p.className="small"; p.textContent = t.desc? textClamp(t.desc, PREVIEW_DESC) : "No description";
-    const editDesc = document.createElement("button"); editDesc.className="btn"; editDesc.textContent="Edit description";
-    editDesc.onclick = ()=>{
-      const v = prompt("Description (max "+MAX_DESC+")", t.desc||"")||"";
-      t.desc = v.slice(0,MAX_DESC); save(); renderPhase(phaseId);
-    };
-    const dl = document.createElement("label"); dl.className="label"; dl.textContent="Due date";
-    const di = document.createElement("input"); di.className="input"; di.type="date"; di.value = t.due||"";
-    di.onchange = ()=>{ t.due = di.value||null; save(); renderPhase(phaseId); };
-    const del = document.createElement("button"); del.className="btn danger"; del.textContent="Delete task";
-    del.onclick = ()=> confirmDialog(`Delete task “${textClamp(t.title,40)}”?`, ()=>{
-      phase.tasks = phase.tasks.filter(x=>x.id!==t.id); save(); renderPhase(phaseId);
-    });
-
-    meta.appendChild(dlabel); meta.appendChild(p); meta.appendChild(editDesc); meta.appendChild(dl); meta.appendChild(di); meta.appendChild(del);
-    item.appendChild(meta);
-
-    (t.done? completed: list).appendChild(item);
-  });
-
-  // Completed collapsible
-  if(completed.children && completed.children.length>0){
-    const wrap = document.createElement("details"); wrap.style.marginTop="8px";
-    const sum = document.createElement("summary"); sum.textContent = `Completed (${completed.children.length})`;
-    wrap.appendChild(sum);
-    while(completed.firstChild){ wrap.appendChild(completed.firstChild); }
-    root.appendChild(list); root.appendChild(wrap);
-  }else{
-    root.appendChild(list);
+  // Expand
+  if(button.classList.contains("expand-btn")){
+    row.classList.toggle("expanded");
+    const desc = row.nextElementSibling;
+    if(desc && desc.classList.contains("task-desc")){
+      desc.style.display = row.classList.contains("expanded") ? "block" : "none";
+    }
+    return;
   }
+  // Toggle complete — FIX #1 keep both sections rendered
+  if(button.classList.contains("check")){
+    const { phaseId, taskId } = row.dataset;
+    const ph = state.phases.find(p=>p.id===phaseId);
+    const t = ph.tasks.find(x=>x.id===taskId);
+    t.done = !t.done;
+    t.completedAt = t.done ? Date.now() : null;
+    saveState();
+    renderTaskLists(phaseId); // re-render Active + Completed
+    renderHome();             // update progress & Next
+    return;
+  }
+  // Delete with confirm
+  if(button.dataset.action==="delete-task"){
+    const { phaseId, taskId } = row.dataset;
+    const ph = state.phases.find(p=>p.id===phaseId);
+    if(confirm(`Delete task “${row.querySelector(".task-title").textContent}”?`)){
+      ph.tasks = ph.tasks.filter(x=>x.id!==taskId);
+      saveState(); renderTaskLists(phaseId); renderHome();
+    }
+    return;
+  }
+  // Edit description
+  if(button.dataset.action==="edit-desc"){
+    const { phaseId, taskId } = row.dataset;
+    const ph = state.phases.find(p=>p.id===phaseId);
+    const t = ph.tasks.find(x=>x.id===taskId);
+    const next = prompt("Edit description (max 180 chars):", (t.desc||"").slice(0,180));
+    if(next!==null){ t.desc = (next||"").slice(0,180); saveState(); renderTaskLists(phaseId); }
+    return;
+  }
+});
+// Inline date change
+$("#taskLists").addEventListener("change", (e)=>{
+  if(!e.target.matches('input[type="date"]')) return;
+  const desc = e.target.closest(".task-desc");
+  const row = desc?.previousElementSibling;
+  if(!row) return;
+  const { phaseId, taskId } = row.dataset;
+  const ph = state.phases.find(p=>p.id===phaseId);
+  const t = ph.tasks.find(x=>x.id===taskId);
+  t.due = e.target.value || null;
+  saveState(); renderTaskLists(phaseId); renderHome();
+});
 
-  // Add button opens task sheet preselected phase
-  $("#addNav").onclick = ()=> openTaskSheet(phase.id);
-}
+/* Bottom nav */
+$("#navHome").addEventListener("click", ()=> location.hash="#/home");
+$("#navTimeline").addEventListener("click", ()=> location.hash="#/timeline");
+$("#navAdd").addEventListener("click", ()=>{
+  // From Home or Timeline, pick centered/first phase; from Phase, use current
+  let phaseId = currentPhaseId;
+  if($("#viewHome").classList.contains("active")){
+    const dots = $$(".dot"); const idx = dots.findIndex(d=>d.classList.contains("active"));
+    phaseId = state.phases[idx>=0? idx:0].id;
+  }
+  if($("#viewTimeline").classList.contains("active")){ phaseId = state.phases[0].id; }
+  openAddTaskSheet(phaseId);
+});
 
-/* ---------- Timeline ---------- */
-function renderTimeline(){
-  const root = $("#viewRoot"); root.innerHTML = "";
-  const hdr = document.createElement("div"); hdr.className="header-row";
-  hdr.innerHTML = `<div class="phase-title">Master Timeline</div>`;
-  root.appendChild(hdr);
-
-  const grouped = {};
-  // collect tasks with due + milestones
-  STATE.phases.forEach(p=> p.tasks.forEach(t=>{ if(t.due){ (grouped[t.due.slice(0,7)] ||= []).push({type:"task", date:t.due, title:t.title, phase:p, task:t}); } }));
-  STATE.timeline.forEach(m=>{ (grouped[m.date.slice(0,7)] ||= []).push({type:"mile", date:m.date, title:m.title, phase:null}); });
-  const months = Object.keys(grouped).sort();
-  months.forEach(m=>{
-    const h = document.createElement("div"); h.className="month"; h.textContent = m;
-    root.appendChild(h);
-    grouped[m].sort((a,b)=> a.date.localeCompare(b.date));
-    grouped[m].forEach(entry=>{
-      const row = document.createElement("div"); row.className="timeline-item";
-      const left = document.createElement("div");
-      left.innerHTML = `<div>${entry.title}</div><div class="small">${entry.date}${entry.type==="task"?" • "+entry.phase.title:""}</div>`;
-      const right = document.createElement("div");
-      if(entry.type==="task"){
-        const btn = document.createElement("button"); btn.className="btn"; btn.textContent="Edit";
-        btn.onclick = ()=>{ location.hash = `#/phase/${entry.phase.id}`; setTimeout(()=>{ /* open sheet? keep simple */ }, 50); };
-        right.appendChild(btn);
-      }
-      row.appendChild(left); row.appendChild(right);
-      root.appendChild(row);
-    });
-  });
-}
-
-/* ---------- Action Sheet / Task Sheet ---------- */
-function openActionSheet(){
-  $("#actionScrim").classList.remove("hidden");
-  $("#actionSheet").classList.remove("hidden");
-  document.documentElement.classList.add("modal-open");
-  $("#asAddTask").onclick = ()=>{ closeActionSheet(); openTaskSheet(); };
-  $("#asCancel").onclick = closeActionSheet;
-  $("#actionScrim").onclick = closeActionSheet;
-  document.onkeydown = (e)=>{ if(e.key==="Escape") closeActionSheet(); };
-}
-function closeActionSheet(){
-  $("#actionScrim").classList.add("hidden");
-  $("#actionSheet").classList.add("hidden");
-  document.documentElement.classList.remove("modal-open");
-  document.onkeydown = null;
-}
-
-function openTaskSheet(phaseId){
-  // Fill phase options
-  const sel = $("#taskPhase"); sel.innerHTML="";
-  STATE.phases.forEach(p=>{
-    const opt=document.createElement("option"); opt.value=p.id; opt.textContent=p.title;
-    if(phaseId && phaseId===p.id) opt.selected = true;
-    sel.appendChild(opt);
+/* ---------- Add Task Sheet (no overlay on Home; it's a modal tied to selected phase) ---------- */
+function openAddTaskSheet(phaseId){
+  const sel = $("#taskPhase"); sel.innerHTML = "";
+  state.phases.forEach(p=>{
+    const o = document.createElement("option");
+    o.value = p.id; o.textContent = p.title;
+    if(p.id===phaseId) o.selected = true;
+    sel.appendChild(o);
   });
   $("#taskTitle").value=""; $("#taskDue").value=""; $("#taskDesc").value="";
-  $("#taskScrim").classList.remove("hidden"); $("#taskSheet").classList.remove("hidden");
-  document.documentElement.classList.add("modal-open");
-  $("#taskCancel").onclick = closeTaskSheet;
-  $("#taskScrim").onclick = closeTaskSheet;
-  document.onkeydown = (e)=>{ if(e.key==="Escape") closeTaskSheet(); };
-  $("#taskSave").onclick = ()=>{
-    const phase = STATE.phases.find(p=>p.id===sel.value);
-    const title = ($("#taskTitle").value || "").trim().slice(0,MAX_TITLE);
-    if(!phase || !title){ toast("Title required"); return; }
-    const due = $("#taskDue").value || null;
-    const desc = ($("#taskDesc").value||"").slice(0,MAX_DESC);
-    phase.tasks.push({ id: nowId("t"), title, due, desc, done:false });
-    save();
-    closeTaskSheet();
-    toast("Task added");
-    route(); // refresh current view
-  };
+  document.documentElement.classList.add("modal-open"); $("#scrim").hidden=false; $("#addTaskSheet").hidden=false;
 }
-function closeTaskSheet(){
-  $("#taskScrim").classList.add("hidden"); $("#taskSheet").classList.add("hidden");
-  document.documentElement.classList.remove("modal-open");
-  document.onkeydown = null;
+function closeSheet(){ document.documentElement.classList.remove("modal-open"); $("#scrim").hidden=true; $("#addTaskSheet").hidden=true; }
+$("#sheetClose").addEventListener("click", closeSheet);
+$("#btnCancelTask").addEventListener("click", closeSheet);
+$("#scrim").addEventListener("click", closeSheet);
+document.addEventListener("keydown", (e)=>{ if(e.key==="Escape") closeSheet(); });
+
+// Create task (enforce title 60, desc 180)
+$("#taskForm").addEventListener("submit", (e)=>{
+  e.preventDefault();
+  const phaseId = $("#taskPhase").value;
+  const title = ($("#taskTitle").value||"").trim().slice(0,60);
+  if(!title){ $("#taskTitle").focus(); return; }
+  const due = $("#taskDue").value || null;
+  const desc = ($("#taskDesc").value||"").trim().slice(0,180);
+  const phase = state.phases.find(p=>p.id===phaseId);
+  phase.tasks.push({ id: `t_${Date.now()}_${Math.random().toString(36).slice(2,5)}`, title, due, desc, done:false, createdAt:Date.now() });
+  saveState(); closeSheet();
+  if(currentPhaseId===phaseId) renderTaskLists(phaseId);
+  renderHome();
+  showToast("Task added");
+});
+
+/* ---------- Timeline (simple) ---------- */
+let timelineFilter = "all";
+$$(".filters .chip").forEach(ch=> ch.addEventListener("click", ()=>{
+  $$(".filters .chip").forEach(c=>c.classList.remove("active"));
+  ch.classList.add("active");
+  timelineFilter = ch.dataset.filter;
+  renderTimeline();
+}));
+$("#btnTimelineTop").addEventListener("click", ()=> location.hash="#/timeline");
+$("#btnJumpToday").addEventListener("click", ()=>{
+  const today = new Date().toISOString().slice(0,10);
+  const el = $(`[data-date="${today}"]`, $("#timelineList"));
+  if(el) el.scrollIntoView({ behavior:"smooth", block:"start" });
+});
+function renderTimeline(){
+  const list = $("#timelineList"); list.innerHTML="";
+  const items = [];
+  state.phases.forEach(p=> p.tasks.forEach(t=>{ if(t.due) items.push({type:"task", date:t.due, title:t.title, phase:p.title, phaseId:p.id, taskId:t.id}); }));
+  state.timeline.forEach(m=> items.push({type:"milestone", date:m.date, title:m.title, phase:m.phase}));
+  const filt = timelineFilter==="all"? items : items.filter(i=> (i.phase||"")===timelineFilter);
+  filt.sort((a,b)=> a.date.localeCompare(b.date));
+  let lastMonth = "";
+  filt.forEach(it=>{
+    const month = it.date.slice(0,7);
+    if(month!==lastMonth){
+      const ml = document.createElement("div"); ml.className="month-label";
+      ml.textContent = new Date(month+"-01").toLocaleString(undefined,{month:"long", year:"numeric"});
+      list.appendChild(ml); lastMonth = month;
+    }
+    const row = document.createElement("button");
+    row.className="task-row"; row.dataset.date = it.date;
+    row.innerHTML = `
+      <div class="check" aria-hidden="true" style="border-radius:12px;width:12px;height:12px;"></div>
+      <div class="task-main">
+        <div class="task-title">${escapeHTML(it.title)}</div>
+        <div class="task-date">${it.date}${it.phase? " • "+escapeHTML(it.phase):""}</div>
+      </div>
+      <div style="width:28px;"></div>`;
+    row.addEventListener("click", ()=>{
+      if(it.type==="task"){
+        location.hash = `#/phase/${encodeURIComponent(it.phaseId)}`;
+        setTimeout(()=>{
+          const tr = $(`.task-row[data-task-id="${it.taskId}"]`);
+          if(tr){ tr.classList.add("expanded"); const desc = tr.nextElementSibling; if(desc) desc.style.display="block"; }
+        }, 80);
+      }
+    });
+    list.appendChild(row);
+  });
 }
 
-/* ---------- Confirm & Toast ---------- */
-function confirmDialog(message, onOk){
-  $("#confirmMsg").textContent = message;
-  $("#confirmScrim").classList.remove("hidden");
-  $("#confirm").classList.remove("hidden");
-  document.documentElement.classList.add("modal-open");
-  $("#confirmCancel").onclick = closeConfirm;
-  $("#confirmScrim").onclick = closeConfirm;
-  $("#confirmOk").onclick = ()=>{ closeConfirm(); onOk&&onOk(); };
-  document.onkeydown = (e)=>{ if(e.key==="Escape") closeConfirm(); };
-}
-function closeConfirm(){
-  $("#confirmScrim").classList.add("hidden"); $("#confirm").classList.add("hidden");
-  document.documentElement.classList.remove("modal-open");
-  document.onkeydown = null;
-}
-function toast(msg){
-  const t=$("#toast"); t.textContent=msg; t.hidden=false;
-  clearTimeout(toast._t); toast._t = setTimeout(()=> t.hidden=true, 2200);
+/* ---------- Toast ---------- */
+function showToast(msg){
+  const t=$("#toast"); t.textContent = msg; t.classList.remove("hidden");
+  clearTimeout(showToast._t); showToast._t = setTimeout(()=> t.classList.add("hidden"), 1800);
 }
 
 /* ---------- Boot ---------- */
 route();
+renderHome();
