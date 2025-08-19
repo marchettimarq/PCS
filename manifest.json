@@ -2,7 +2,6 @@
   "name": "easyPCS",
   "short_name": "easyPCS",
   "start_url": ".",
-  "scope": ".",
   "display": "standalone",
   "background_color": "#F7F8FC",
   "theme_color": "#2F6BFF",
