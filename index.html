@@ -4,7 +4,13 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
   <title>easyPCS</title>
-  <link rel="stylesheet" href="style.css"/>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/easypcs-180.png?v5">
+  <link rel="apple-touch-icon" sizes="152x152" href="icons/easypcs-152.png?v5">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/easypcs-192.png?v5">
+  <link rel="icon" sizes="32x32" href="icons/easypcs-32.png?v5">
+  <link rel="stylesheet" href="style.css?v5"/>
 </head>
 <body>
   <!-- Sticky Top App Bar -->
@@ -21,7 +27,7 @@
   </header>
 
   <main id="app" class="app" role="main">
-    <!-- Home: Phase Carousel (Option B) -->
+    <!-- Home: Phase Carousel -->
     <section id="viewHome" class="view active" aria-labelledby="homeHeading">
       <h1 id="homeHeading" class="sr-only">Phases</h1>
       <div class="phase-carousel" id="phaseCarousel" aria-label="Phase carousel"></div>
@@ -70,7 +76,7 @@
     </section>
   </main>
 
-  <!-- Fixed Bottom Nav -->
+  <!-- Bottom Nav -->
   <nav class="bottom-nav" role="navigation" aria-label="Primary">
     <button class="nav-btn" id="navHome" aria-label="Home">
       <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10l9-7 9 7v8a2 2 0 0 1-2 2h-4v-6H9v6H5a2 2 0 0 1-2-2v-8z" fill="currentColor"/></svg>
@@ -86,7 +92,7 @@
     </button>
   </nav>
 
-  <!-- Add Task Sheet (modal) -->
+  <!-- Overlays -->
   <div id="scrim" class="scrim" hidden></div>
   <section id="addTaskSheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>
     <header class="sheet-header">
@@ -115,7 +121,6 @@
     </form>
   </section>
 
-  <!-- Confirm Dialog -->
   <section id="confirm" class="confirm" role="dialog" aria-modal="true" hidden>
     <div class="confirm-card">
       <p id="confirmMsg">Are you sure?</p>
@@ -126,9 +131,8 @@
     </div>
   </section>
 
-  <!-- Toast -->
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
-  <script src="script.js"></script>
+  <script src="script.js?v5"></script>
 </body>
 </html>
