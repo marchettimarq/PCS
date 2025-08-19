@@ -14,7 +14,7 @@ const $$ = (s, r=document)=> Array.from(r.querySelectorAll(s));
 const db = (fn,ms=200)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms);} };
 const byDue = (a,b)=>{ const ad=a.due||"", bd=b.due||""; if(ad&&bd){const c=ad.localeCompare(bd); if(c) return c;} if(ad&&!bd) return -1; if(!ad&&bd) return 1; return (a.title||'').localeCompare(b.title||''); };
 const byCompletedAtDesc = (a,b)=> (b.completedAt||0)-(a.completedAt||0);
-const esc = (s="")=> s.replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const esc = (s="")=> s.replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m]));
 
 /* ---------- State ---------- */
 let state = safeLoad() || seedData();

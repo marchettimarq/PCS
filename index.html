@@ -4,16 +4,18 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
   <title>easyPCS</title>
+  <meta name="theme-color" content="#2F6BFF">
+  <link rel="manifest" href="manifest.json?v6">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="apple-touch-icon" sizes="180x180" href="icons/easypcs-180.png?v5">
-  <link rel="apple-touch-icon" sizes="152x152" href="icons/easypcs-152.png?v5">
-  <link rel="apple-touch-icon" sizes="192x192" href="icons/easypcs-192.png?v5">
-  <link rel="icon" sizes="32x32" href="icons/easypcs-32.png?v5">
-  <link rel="stylesheet" href="style.css?v5"/>
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/easypcs-180.png?v6">
+  <link rel="apple-touch-icon" sizes="152x152" href="icons/easypcs-152.png?v6">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/easypcs-192.png?v6">
+  <link rel="icon" sizes="32x32" href="icons/easypcs-32.png?v6">
+  <link rel="stylesheet" href="style.css?v6"/>
 </head>
 <body>
-  <!-- Sticky Top App Bar -->
+  <noscript style="padding:12px;color:#b91c1c;background:#fee2e2">JavaScript is required. If you see this, scripts didn’t load (likely a caching issue). Hard‑refresh.</noscript>
   <header class="topbar" role="banner">
     <div class="brand" aria-label="easyPCS">easy<span>PCS</span></div>
     <div class="top-actions">
@@ -27,14 +29,12 @@
   </header>
 
   <main id="app" class="app" role="main">
-    <!-- Home: Phase Carousel -->
     <section id="viewHome" class="view active" aria-labelledby="homeHeading">
       <h1 id="homeHeading" class="sr-only">Phases</h1>
       <div class="phase-carousel" id="phaseCarousel" aria-label="Phase carousel"></div>
       <div class="dots" id="carouselDots" role="tablist" aria-label="Phase selector"></div>
     </section>
 
-    <!-- Phase Detail -->
     <section id="viewPhase" class="view" aria-labelledby="phaseHeading">
       <div class="phase-header">
         <button id="btnBack" class="icon-btn" aria-label="Back to Home" title="Back">
@@ -59,7 +59,6 @@
       </div>
     </section>
 
-    <!-- Timeline -->
     <section id="viewTimeline" class="view" aria-labelledby="timelineHeading">
       <h1 id="timelineHeading" class="sr-only">Master Timeline</h1>
       <div class="timeline-header">
@@ -76,7 +75,6 @@
     </section>
   </main>
 
-  <!-- Bottom Nav -->
   <nav class="bottom-nav" role="navigation" aria-label="Primary">
     <button class="nav-btn" id="navHome" aria-label="Home">
       <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10l9-7 9 7v8a2 2 0 0 1-2 2h-4v-6H9v6H5a2 2 0 0 1-2-2v-8z" fill="currentColor"/></svg>
@@ -92,7 +90,6 @@
     </button>
   </nav>
 
-  <!-- Overlays -->
   <div id="scrim" class="scrim" hidden></div>
   <section id="addTaskSheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>
     <header class="sheet-header">
@@ -133,6 +130,6 @@
 
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
-  <script src="script.js?v5"></script>
+  <script src="script.js?v6"></script>
 </body>
 </html>
