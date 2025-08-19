@@ -1,19 +1,99 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>easyPCS</title>
-  <link rel="stylesheet" href="style.css"/>
+  <meta name="theme-color" content="#2F6BFF">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-32.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="banner">easy<span>PCS</span></header>
-  <main id="app"></main>
-  <nav class="bottom-bar">
-    <button id="homeBtn">Home</button>
-    <button id="addBtn">＋</button>
-    <button id="timelineBtn">Timeline</button>
+  <!-- Sticky top bar -->
+  <header id="topbar" class="topbar">
+    <div class="brand">easyPCS</div>
+    <div class="actions">
+      <button id="btnTimeline" class="icon" aria-label="Timeline">📅</button>
+      <button id="btnMenu" class="icon" aria-label="Menu">⋯</button>
+    </div>
+  </header>
+
+  <!-- App container -->
+  <main id="app" class="app">
+    <!-- Home (carousel) -->
+    <section id="view-home" class="view active" aria-label="Home">
+      <div id="carousel" class="carousel"></div>
+      <div id="pager" class="pager" role="tablist" aria-label="Phases pagination"></div>
+    </section>
+
+    <!-- Phase detail -->
+    <section id="view-phase" class="view" aria-label="Phase">
+      <div class="phase-header">
+        <button id="backHome" class="link">← Home</button>
+        <input id="phaseTitle" class="title" aria-label="Edit title">
+        <button id="phaseOptions" class="icon">⋯</button>
+      </div>
+      <div id="taskList" class="tasks"></div>
+      <div id="completedWrap" class="completed"></div>
+    </section>
+
+    <!-- Timeline -->
+    <section id="view-timeline" class="view" aria-label="Master Timeline">
+      <div class="timeline-header">
+        <h2>Master Timeline</h2>
+        <div class="filters">
+          <button class="chip active" data-filter="all">All</button>
+          <button class="chip" data-filter="Pre‑Departure">Pre‑Departure</button>
+          <button class="chip" data-filter="Mid Prep">Mid Prep</button>
+          <button class="chip" data-filter="Final Out">Final Out</button>
+          <button class="chip" data-filter="Arrival (Hill AFB)">Arrival</button>
+        </div>
+      </div>
+      <div id="timelineList" class="timeline"></div>
+    </section>
+  </main>
+
+  <!-- Fixed bottom bar -->
+  <nav class="bottombar" id="bottombar">
+    <button id="tabHome" class="tab" aria-label="Home">Home</button>
+    <button id="tabPlus" class="fab" aria-label="Add">＋</button>
+    <button id="tabTimeline" class="tab" aria-label="Timeline">Timeline</button>
   </nav>
+
+  <!-- Global scrim and modals -->
+  <div id="scrim" class="scrim" hidden></div>
+
+  <div id="sheetActions" class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetActionsTitle" hidden>
+    <h3 id="sheetActionsTitle">Create</h3>
+    <button id="createTask" class="sheet-btn">Add Task</button>
+    <button id="createPhase" class="sheet-btn">Add Phase</button>
+    <button id="closeSheetActions" class="sheet-btn secondary">Cancel</button>
+  </div>
+
+  <div id="sheetTask" class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTaskTitle" hidden>
+    <h3 id="sheetTaskTitle">Add Task</h3>
+    <label>Title<input id="taskTitle" placeholder="e.g., Upload docs to VIPER"></label>
+    <label>Due date<input id="taskDue" type="date"></label>
+    <label>Description<textarea id="taskDesc" rows="3" placeholder="Optional notes"></textarea></label>
+    <div class="sheet-row">
+      <button id="cancelTask" class="sheet-btn secondary">Cancel</button>
+      <button id="saveTask" class="sheet-btn primary">Save</button>
+    </div>
+  </div>
+
+  <div id="dialogConfirm" class="dialog" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" hidden>
+    <h3 id="confirmTitle">Confirm</h3>
+    <p id="confirmMsg">Are you sure?</p>
+    <div class="dialog-row">
+      <button id="confirmCancel" class="sheet-btn secondary">Cancel</button>
+      <button id="confirmOk" class="sheet-btn danger">Delete</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
   <script src="script.js"></script>
 </body>
 </html>
